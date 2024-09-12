@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Audio Recorder</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
+        audio {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Record Your Audio</h1>
+    <button id="startBtn">Start Recording</button>
+    <button id="stopBtn" disabled>Stop Recording</button>
+    <p><strong>Status:</strong> <span id="status">Idle</span></p>
+    <audio id="audioPlayback" controls></audio>
+    <a id="downloadLink" style="display: none;" download="recording.wav">Download Recording</a>
+
+    <script>
+        const startBtn = document.getElementById("startBtn");
+        const stopBtn = document.getElementById("stopBtn");
+        const statusDisplay = document.getElementById("status");
+        const audioPlayback = document.getElementById("audioPlayback");
+        const downloadLink = document.getElementById("downloadLink");
+
+        let mediaRecorder;
+        let audioChunks = [];
+        let audioStream;
+
+        // Start recording when the "Start Recording" button is clicked
+        startBtn.addEventListener("click", async () => {
+            try {
+                // Request access to the microphone
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+                // Initialize MediaRecorder to capture audio
+                mediaRecorder = new MediaRecorder(audioStream);
+                mediaRecorder.start();
+
+                statusDisplay.innerText = "Recording...";
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+
+                mediaRecorder.ondataavailable = event => {
+                    audioChunks.push(event.data);
+                };
+
+                // Stop recording and create a Blob from the audio data
+                mediaRecorder.onstop = () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    audioPlayback.src = audioUrl;
+                    downloadLink.href = audioUrl;
+                    downloadLink.style.display = 'block';
+                    audioChunks = [];
+                };
+            } catch (err) {
+                console.error("Error accessing microphone: ", err);
+                alert("Microphone access denied or not supported by your browser.");
+            }
+        });
+
+        // Stop recording when the "Stop Recording" button is clicked
+        stopBtn.addEventListener("click", () => {
+            mediaRecorder.stop();
+            audioStream.getTracks().forEach(track => track.stop()); // Stop microphone
+            statusDisplay.innerText = "Stopped";
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+        });
+    </script>
+
+</body>
+</html>
